@@ -1,0 +1,19 @@
+# Archivos y directorios generados por npm
+node_modules/
+
+# Archivos de registro
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de IDE y editores de texto
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Archivos de configuración locales
+.env
