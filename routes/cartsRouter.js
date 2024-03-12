@@ -1,12 +1,10 @@
-// cartsRouter.js
-
 const express = require('express');
 const router = express.Router();
 const cartsController = require('../controllers/cartsController');
 
-router.post('/', (req, res) => {
-    const newCart = cartsController.createCart();
-    res.status(201).json(newCart);
-});
+// Rutas para la gestión de carritos
+router.post('/', cartsController.createCart);
+router.get('/:cid', cartsController.getCartById);
+router.post('/:cid/product/:pid', cartsController.addProductToCart);
 
 module.exports = router;

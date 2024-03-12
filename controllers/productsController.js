@@ -1,57 +1,128 @@
-// productsController.js
-
 const fs = require('fs');
 
-const productsFilePath = './data/productos.json';
-
-const getAllProducts = () => {
-    const productsData = fs.readFileSync(productsFilePath, 'utf-8');
-    return JSON.parse(productsData);
+// Método para listar todos los productos
+exports.getAllProducts = (req, res) => {
+    // Lógica para obtener todos los productos
+    const limit = parseInt(req.query.limit); // Limitar la cantidad de productos devueltos si se especifica en la consulta
+    fs.readFile('data/productos.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error interno del servidor');
+            return;
+        }
+        let products = JSON.parse(data);
+        if (limit) {
+            products = products.slice(0, limit); // Aplicar el límite de productos si se especifica en la consulta
+        }
+        res.json(products);
+    });
 };
 
-const getProductById = (productId) => {
-    const products = getAllProducts();
-    return products.find(product => product.id === productId);
+// Método para obtener un producto por su ID
+exports.getProductById = (req, res) => {
+    // Lógica para obtener un producto por su ID
+    const productId = req.params.pid;
+    fs.readFile('data/productos.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error interno del servidor');
+            return;
+        }
+        const products = JSON.parse(data);
+        const product = products.find(product => product.id === productId);
+        if (!product) {
+            res.status(404).send('Producto no encontrado');
+            return;
+        }
+        res.json(product);
+    });
 };
 
-const addProduct = (newProduct) => {
-    const products = getAllProducts();
-    newProduct.id = generateProductId();
-    if (newProduct.status === undefined) {
-        newProduct.status = true; // Establecer el valor predeterminado de status como true si no se proporciona
+// Método para agregar un nuevo producto
+exports.addProduct = (req, res) => {
+    // Lógica para agregar un nuevo producto
+    const newProduct = req.body;
+    newProduct.id = generateUniqueId(); // Generar un ID único para el nuevo producto
+    if (!newProduct.status) {
+        newProduct.status = true; // Establecer el valor predeterminado de status en true si no se proporciona en el cuerpo de la solicitud
     }
-    products.push(newProduct);
-    fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
-    return newProduct;
+    fs.readFile('data/productos.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error interno del servidor');
+            return;
+        }
+        const products = JSON.parse(data);
+        products.push(newProduct);
+        fs.writeFile('data/productos.json', JSON.stringify(products, null, 2), err => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error interno del servidor');
+                return;
+            }
+            res.status(201).json(newProduct);
+        });
+    });
 };
 
-const updateProduct = (productId, updatedFields) => {
-    const products = getAllProducts();
-    const productIndex = products.findIndex(product => product.id === productId);
-    if (productIndex !== -1) {
+// Método para actualizar un producto por su ID
+exports.updateProduct = (req, res) => {
+    // Lógica para actualizar un producto por su ID
+    const productId = req.params.pid;
+    const updatedFields = req.body;
+    fs.readFile('data/productos.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error interno del servidor');
+            return;
+        }
+        let products = JSON.parse(data);
+        const productIndex = products.findIndex(product => product.id === productId);
+        if (productIndex === -1) {
+            res.status(404).send('Producto no encontrado');
+            return;
+        }
         products[productIndex] = { ...products[productIndex], ...updatedFields };
-        fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
-        return products[productIndex];
-    }
-    return null;
+        fs.writeFile('data/productos.json', JSON.stringify(products, null, 2), err => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error interno del servidor');
+                return;
+            }
+            res.status(200).json(products[productIndex]);
+        });
+    });
 };
 
-const deleteProduct = (productId) => {
-    let products = getAllProducts();
-    products = products.filter(product => product.id !== productId);
-    fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
+// Método para eliminar un producto por su ID
+exports.deleteProduct = (req, res) => {
+    // Lógica para eliminar un producto por su ID
+    const productId = req.params.pid;
+    fs.readFile('data/productos.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+            res.status(500).send('Error interno del servidor');
+            return;
+        }
+        let products = JSON.parse(data);
+        const productIndex = products.findIndex(product => product.id === productId);
+        if (productIndex === -1) {
+            res.status(404).send('Producto no encontrado');
+            return;
+        }
+        products.splice(productIndex, 1);
+        fs.writeFile('data/productos.json', JSON.stringify(products, null, 2), err => {
+            if (err) {
+                console.error(err);
+                res.status(500).send('Error interno del servidor');
+                return;
+            }
+            res.status(204).send();
+        });
+    });
 };
 
-const generateProductId = () => {
-    const products = getAllProducts();
-    const lastProductId = products.length > 0 ? products[products.length - 1].id : 0;
-    return lastProductId + 1;
-};
-
-module.exports = {
-    getAllProducts,
-    getProductById,
-    addProduct,
-    updateProduct,
-    deleteProduct
-};
+// Función para generar un ID único para un producto
+function generateUniqueId() {
+    return Math.random().toString(36).substr(2, 9);
+}
