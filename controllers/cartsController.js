@@ -50,43 +50,36 @@ exports.getCartById = (req, res) => {
 };
 
 // Método para agregar un producto al carrito
-exports.addProductToCart = (req, res) => {
-    // Lógica para agregar un producto al carrito
-    const cartId = req.params.cid;
-    const productId = req.params.pid;
-    const quantity = parseInt(req.body.quantity); // Suponiendo que la cantidad se pasa en el cuerpo de la solicitud
+exports.addProductToCart = async (req, res) => {
+    try {
+        const cartId = req.params.cid;
+        const productId = req.params.pid;
+        const quantity = 1; // Solo se agregará una cantidad del producto al carrito
 
-    // Lógica para agregar el producto al carrito con el id proporcionado
-    fs.readFile('data/carrito.json', 'utf8', (err, data) => {
-        if (err) {
-            console.error(err);
-            res.status(500).send('Error interno del servidor');
-            return;
-        }
-        const carts = JSON.parse(data);
-        const cart = carts.find(cart => cart.id === cartId);
+        // Lógica para agregar el producto al carrito con el id proporcionado
+        const cart = await Cart.getCartById(cartId);
         if (!cart) {
             res.status(404).send('Carrito no encontrado');
             return;
         }
+
         // Verificar si el producto ya existe en el carrito
-        const existingProduct = cart.products.find(product => product.id === productId);
-        if (existingProduct) {
-            existingProduct.quantity += quantity; // Incrementar la cantidad si el producto ya está en el carrito
+        const existingProductIndex = cart.products.findIndex(product => product.product === productId);
+        if (existingProductIndex !== -1) {
+            cart.products[existingProductIndex].quantity += quantity;
         } else {
-            cart.products.push({ id: productId, quantity: quantity }); // Agregar el nuevo producto al carrito
+            cart.products.push({ product: productId, quantity });
         }
-        // Actualizar el archivo carrito.json con el carrito modificado
-        fs.writeFile('data/carrito.json', JSON.stringify(carts, null, 2), err => {
-            if (err) {
-                console.error(err);
-                res.status(500).send('Error interno del servidor');
-                return;
-            }
-            res.status(200).json(cart);
-        });
-    });
+
+        await cart.save(); // Guardar el carrito actualizado en la base de datos o en el archivo JSON
+
+        res.status(200).json(cart);
+    } catch (error) {
+        console.error(`Error al agregar producto al carrito ${cartId}:`, error);
+        res.status(500).send('Error interno del servidor');
+    }
 };
+
 
 // Función para generar un ID único para un carrito
 function generateUniqueId() {
